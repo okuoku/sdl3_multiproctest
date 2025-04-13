@@ -9,6 +9,7 @@ static SDL_Window* wnd;
 static SDL_Renderer* rnd;
 static int quit_requested = 0;
 static int animphase = 0;
+static int configured = 0;
 
 static Uint32
 cb_tick(void* bogus, SDL_TimerID tim, Uint32 interval){
@@ -20,7 +21,7 @@ cb_tick(void* bogus, SDL_TimerID tim, Uint32 interval){
     SDL_UserEvent ev;
     SDL_zero(ev);
     ev.type = SDL_EVENT_USER; /* FIXME: Register it */
-    SDL_PushEvent(&ev);
+    SDL_PushEvent((SDL_Event*)&ev);
 
     return 10; /* 10 ms later */
 }
@@ -33,6 +34,11 @@ tick(void){
     }
 
 #ifdef PATTERN_A
+    /* A: Moving window */
+    if(! configured){
+        /* No pre-configuration */
+        configured = 1;
+    }
     /* Render something from main thread */
     (void) SDL_SetRenderDrawColor(rnd, animphase, animphase, animphase, 
                                   SDL_ALPHA_OPAQUE);
@@ -40,20 +46,25 @@ tick(void){
 
     /* Layout window */
     (void) SDL_SetWindowPosition(wnd, 300 + animphase * 2, 500);
-
-    /* Flip window */
-    (void) SDL_RenderPresent(rnd);
+    (void) SDL_RaiseWindow(wnd); /* FIXME: It also steals focus! */
 #elif defined(PATTERN_B)
-    /* Another pattern */
+    /* B: Static window */
+    if(! configured){
+        /* Don't update window position at anim */
+        (void) SDL_SetWindowPosition(wnd, 100, 100);
+        (void) SDL_SetWindowSize(wnd, 800, 800);
+        configured = 1;
+    }
     (void) SDL_SetRenderDrawColor(rnd, animphase, 128, 128, 
                                   SDL_ALPHA_OPAQUE);
     (void) SDL_RenderClear(rnd);
-    (void) SDL_SetWindowPosition(wnd, 100, 100);
-    (void) SDL_SetWindowSize(wnd, 800, 800);
-    (void) SDL_RenderPresent(rnd);
 #else
 #error unknown pattern??
 #endif
+
+    /* Flip and Update window */
+    (void) SDL_RenderPresent(rnd);
+    (void) SDL_SyncWindow(wnd);
 }
 
 
